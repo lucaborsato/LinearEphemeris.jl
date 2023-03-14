@@ -1,0 +1,14 @@
+name = "LinearEphemeris"
+uuid = "9713aa98-2a8a-4777-b9ba-e1a918906e87"
+authors = ["Luca Borsato <borsato.luca@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
