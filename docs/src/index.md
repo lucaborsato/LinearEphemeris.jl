@@ -15,7 +15,7 @@ It returns to the standard output a summary of the fit (with statistics) and eac
 
 ```
 julia> using Pkg
-julia> Pkg.clone("to/add/path/to/github/here")
+julia> Pkg.clone("https://github.com/lucaborsato/LinearEphemeris.jl.git")
 ```
 
 ## 3. Example  
