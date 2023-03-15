@@ -14,6 +14,6 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/lucaborsato/LinearEphemeris.jl",
+    repo = "github.com/lucaborsato/LinearEphemeris.jl.git",
     devbranch = "main"
 )

@@ -1,5 +1,7 @@
 # LinearEphemeris
 
+See [Documentation](https://lucaborsato.github.io/LinearEphemeris.jl/).
+
 ## 1. Introduction  
 
 A [Julia](https://julialang.org/) package for linear ephemerides fit of exoplanet transit times.  
