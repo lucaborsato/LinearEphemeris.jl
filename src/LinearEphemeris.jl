@@ -441,11 +441,11 @@ end
         sources = nothing,
         bootstrap = true,
         nboot = nothing,
+        return_distribution = true,
         do_plot = true,
         show_gui = true,
         plot_file = nothing,
         seed = 42,
-        return_distribution = true,
     )
 
 Compute the full linear ephemeris with all needed arguments.  

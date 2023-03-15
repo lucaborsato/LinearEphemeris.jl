@@ -17,6 +17,10 @@ It returns to the standard output a summary of the fit (with statistics) and eac
 julia> using Pkg
 julia> Pkg.clone("https://github.com/lucaborsato/LinearEphemeris.jl.git")
 ```
+or  
+```
+julia> Pkg.clone("git@github.com:lucaborsato/LinearEphemeris.jl.git")
+```
 
 ## 3. Example  
 
@@ -49,6 +53,7 @@ full_linear_ephemeris_analysis(
         sources = nothing,
         bootstrap = true,
         nboot = nothing,
+        return_distribution = true,
         do_plot = true,
         show_gui = true,
         plot_file = nothing,
