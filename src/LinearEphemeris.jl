@@ -2,6 +2,7 @@ module LinearEphemeris
 
 using ColorSchemes
 using LaTeXStrings
+using LinearAlgebra
 using Plots, Plots.Measures
 using Printf
 using Random
@@ -85,6 +86,49 @@ function linear_transit_times(Tref, Pref, epochs)
     return linear_transit_time.(Tref, Pref, epochs)
 end
 
+# """
+#     wls_nr(x, y, ey)
+
+# WEIGHTED LEAST SQUARE AS IN [NUMERICAL RECIPES](https://ui.adsabs.harvard.edu/abs/1992nrfa.book.....P/abstract)
+
+# # Arguments:
+# - `x::Vector{Float64}`: independent variable  
+# - `y::Vector{Float64}`: dependent variable  
+# - `ey::Vector{Float64}`: measurement errors on dependent variable
+# # Returns:
+# - `intercept::tuple(fit::Float64, err::Float64)`: intercept with value (fit) and formal error (err)
+# - `slope::tuple(fit::Float64, err::Float64)`: slope with value (fit) and formal error (err)
+# """
+# function wls_nr(x, y, ey)
+#     # WEIGHTED LEAST SQUARE AS IN NUMERICAL RECIPES
+#     # return intercept q and slope m of a straight linear_ephemeris
+#     # of type y = q + m * x
+#     #
+#     # x == independent variable
+#     # y == dependent variable
+#     # ey == measurement errors on y
+#     #
+#     # q = tuple(fit, err)
+#     # m = tuple(fit, err)
+
+#     w = 1.0 ./ (ey .^ 2)
+#     S = sum(w)
+#     Sx = sum(w .* x)
+#     Sy = sum(w .* y)
+#     Sxx = sum(w .* (x .^ 2))
+#     # Syy = sum( w .* (y .^2))
+#     Sxy = sum(w .* x .* y)
+
+#     Δ = S * Sxx - (Sx^2)
+#     q = (Sxx * Sy - Sx * Sxy) / Δ
+#     m = (S * Sxy - Sx * Sy) / Δ
+
+#     err_q = sqrt(Sxx / Δ)
+#     err_m = sqrt(S / Δ)
+
+#     return (fit = q, err = err_q), (fit = m, err = err_m)
+# end
+
 """
     wls_nr(x, y, ey)
 
@@ -110,23 +154,72 @@ function wls_nr(x, y, ey)
     # q = tuple(fit, err)
     # m = tuple(fit, err)
 
+    # nx = len(x)
     w = 1.0 ./ (ey .^ 2)
     S = sum(w)
-    Sx = sum(w .* x)
-    Sy = sum(w .* y)
-    Sxx = sum(w .* (x .^ 2))
-    # Syy = sum( w .* (y .^2))
-    Sxy = sum(w .* x .* y)
+    Sx = dot(w, x)
+    Sy = dot(w, y)
+    
+    t = (x .- (Sx/S)) ./ ey
+    m = dot(t./ey, y)
+    St2 = dot(t, t)
 
-    Δ = S * Sxx - (Sx^2)
-    q = (Sxx * Sy - Sx * Sxy) / Δ
-    m = (S * Sxy - Sx * Sy) / Δ
+    m /= St2
+    q = (Sy - (Sx*m))/S
+    err_q = sqrt((1.0 + ((Sx*Sx)/(S*St2)))/S)
+    err_m = sqrt(1.0/St2)
 
-    err_q = sqrt(Sxx / Δ)
-    err_m = sqrt(S / Δ)
-
-    return return (fit = q, err = err_q), (fit = m, err = err_m)
+    return (fit = q, err = err_q), (fit = m, err = err_m)
 end
+
+"""
+    wls_nr(x, y, ey)
+
+WEIGHTED LEAST SQUARE AS IN [NUMERICAL RECIPES](https://ui.adsabs.harvard.edu/abs/1992nrfa.book.....P/abstract)
+
+# Arguments:
+- `x::Vector{Float64}`: independent variable  
+- `y::Vector{Float64}`: dependent variable  
+- `ey::Vector{Float64}`: measurement errors on dependent variable
+# Returns:
+- `intercept::tuple(fit::Float64, err::Float64)`: intercept with value (fit) and formal error (err)
+- `slope::tuple(fit::Float64, err::Float64)`: slope with value (fit) and formal error (err)
+"""
+function wls_nr(x, y)
+    # WEIGHTED LEAST SQUARE AS IN NUMERICAL RECIPES
+    # return intercept q and slope m of a straight linear_ephemeris
+    # of type y = q + m * x
+    #
+    # x == independent variable
+    # y == dependent variable
+    #
+    # q = tuple(fit, err)
+    # m = tuple(fit, err)
+
+    nx = len(x)
+    S = nx
+    Sx = sum(x)
+    Sy = sum(y)
+
+    t = x .- (Sx/S)
+    m = dot(t, y)
+    St2 = dot(t, t)
+    
+    m /= St2
+    q = (Sy - (Sx*m))/S
+    err_q = sqrt((1.0 + ((Sx*Sx)/(S*St2)))/S)
+    err_m = sqrt(1.0/St2)
+
+    t = y .- (q + m .* x)
+    chi2 = dot(t,t)
+    dof = nx-2
+    sigdat = sqrt(chi2/dof)
+    err_q = err_q*sigdat
+    err_m = err_m*sigdat
+
+    return (fit = q, err = err_q), (fit = m, err = err_m)
+end
+
 
 """
     fit_linear_ephemeris(epochs, T0s, err_T0s)
@@ -353,10 +446,10 @@ end
 function plot_one_bootstrap_distribution(x_true, x_boot, x_label)
 
     println("plotting ", x_label)
-    println("best", x_true)
-    println("median", x_boot.median)
-    println("rms   ", x_boot.rms)
-    println("nboot ", length(x_boot.distribution))
+    println("best   ", x_true)
+    println("median ", x_boot.median)
+    println("rms    ", x_boot.rms)
+    println("nboot  ", length(x_boot.distribution))
 
     color = palette(:tab10)[1]
     x_plt = histogram(
@@ -516,9 +609,10 @@ function full_linear_ephemeris_analysis(
     else
         xlscale = @sprintf(" - %.3f", tscale)
     end
+
     x_plt = Tlin .- tscale
-    y_plt = oc_d * scl.val
-    ey_plt = err_T0s * scl.val
+    y_plt = oc_d .* scl.val
+    ey_plt = err_T0s .* scl.val
 
     rng = MersenneTwister(seed)
     Random.seed!(rng, seed)
@@ -590,7 +684,7 @@ function full_linear_ephemeris_analysis(
                 boot_plt = plot_full_bootstrap_distribution(Tref.fit, T_boot, Pref.fit, P_boot)
             end 
         else
-            prop_ey - linear_error_prop.(Tref.err, Pref.err, epochs) .* scl.val
+            prop_ey = linear_error_prop.(Tref.err, Pref.err, epochs) .* scl.val
             println("Error propagation plot with formal error")
         end
         plot!(
@@ -621,9 +715,9 @@ function full_linear_ephemeris_analysis(
                 plt,
                 x_plt[sel],
                 y_plt[sel],
-                ey_plt;
+                ey_plt[sel];
                 color = colors[i_s],
-                lw = 2,
+                lw = 2.5,
                 ls = :solid,
             )
             plot!(
@@ -632,10 +726,10 @@ function full_linear_ephemeris_analysis(
                 y_plt[sel],
                 seriestype = :scatter,
                 label = "$(ss)",
-                markersize = 4,
+                markersize = 5,
                 markercolor = colors[i_s],
                 markerstrokecolor = :white,
-                markerstrokewidth = 0.4,
+                markerstrokewidth = 0.5,
             )
         end
         # horizontal line at 0
@@ -682,7 +776,7 @@ function full_linear_ephemeris_analysis(
     println()
     println("# O-C SUMMARY")
     l = @sprintf(
-        "# %5s %15s %10s %10s %10s %10s %15s %10s",
+        "# %5s %15s %10s %10s %10s %10s %15s %20s",
         "epoch",
         "T0s",
         "err_T0s",
@@ -696,7 +790,7 @@ function full_linear_ephemeris_analysis(
 
     for (epo, T0, eT0, oc, lin, ss) in zip(epochs, T0s, err_T0s, oc_d, Tlin, sources)
         l = @sprintf(
-            "  %5.0f %15.6f %10.6f %10.6f %10.3f %10.1f %15.6f %10s",
+            "  %5.0f %15.6f %10.6f %10.6f %10.3f %10.1f %15.6f %20s",
             epo,
             T0,
             eT0,
@@ -710,6 +804,10 @@ function full_linear_ephemeris_analysis(
     end
 
     println()
+
+    # for (eT0, ePl) in zip(err_T0s, ey_plt)
+    #     println(eT0, " ", ePl)
+    # end
 
     return
 end
