@@ -39,7 +39,7 @@ end
 
 propagates error on x value as:
 ```math
-\\sqrt{\\mathrm{eq}^2 + (x × \\mathrm{em})^2}
+\\sqrt{\\mathrm{eq}^2 + (x \\times \\mathrm{em})^2}
 ```
 # Arguments:
 - `eq::Float64`: error on intercept (reference time Tref)
@@ -268,6 +268,9 @@ function statistics_fit(y_obs, y_mod; ey_obs = nothing, n_fit = 2)
 
     n_data = length(y_obs)
     dof = n_data - n_fit
+    if n_data == n_fit 
+        dof = 1
+    end
     if isnothing(ey_obs)
         ey_obs = ones(n_data)
     end
@@ -431,17 +434,19 @@ end
 
 Create errorbars on plot withouth the cap.
 """
-function custom_errorbar!(plt, x, y, ey; color = :auto, lw = 1.0, ls = :auto)
+function custom_errorbar!(plt, x, y, ey; color = :auto, lw = 1.0, ls = :auto, la=1)
 
     for i in eachindex(x)
         xi = x[i]
         yl = y[i] - ey[i]
         yu = y[i] + ey[i]
-        plot!(plt, [xi, xi], [yl, yu], color = color, lw = lw, ls = ls, label = "")
+        plot!(plt, [xi, xi], [yl, yu], color = color, lw = lw, ls = ls, linealpha=la, label = "")
     end
     return
 end
 
+
+f4s(x) = @sprintf("%.4f", x)
 
 function plot_one_bootstrap_distribution(x_true, x_boot, x_label)
 
@@ -459,8 +464,9 @@ function plot_one_bootstrap_distribution(x_true, x_boot, x_label)
         color=:gray,
         linewidth=0.1,
         linecolor=:white,
-        label="bootstrap"
+        label="bootstrap",
     )
+    
 
     vline!(
         x_plt,
@@ -506,6 +512,13 @@ function plot_full_bootstrap_distribution(q_true, q_boot, m_true, m_boot)
 
     q_plt = plot_one_bootstrap_distribution(q_true, q_boot, L"$T_\mathrm{ref}$")
     m_plt = plot_one_bootstrap_distribution(m_true, m_boot, L"$P_\mathrm{ref}$")
+    # xmin = round(minimum(m_boot.distribution), digits=4)
+    # xmax = round(maximum(m_boot.distribution), digits=4)
+    # xs = LinRange(xmin, xmax, 5)
+
+    xs = xticks(m_plt)[1][1]
+    ss = f4s.(xs)
+    xticks!(m_plt, xs, ss)
 
     plt = plot(
         q_plt, m_plt,
@@ -515,10 +528,13 @@ function plot_full_bootstrap_distribution(q_true, q_boot, m_true, m_boot)
         dpi = 300,
         thickness_scaling = 1,
         fontfamily = "Computer Modern",
-        tickfontsize = 14,
-        guidefontsize = 16,
+        tickfontsize = 16,
+        guidefontsize = 18,
         margin = 5mm,
     )
+
+    
+
 
     return plt
 end
@@ -536,6 +552,8 @@ end
         nboot = nothing,
         return_distribution = true,
         do_plot = true,
+        plot_bootstrap = true,
+        plot_propagation = true,
         show_gui = true,
         plot_file = nothing,
         seed = 42,
@@ -555,6 +573,8 @@ It prints the output on the standard output and do the plots if required.
 - `nboot::Int = nothing`: number of bootstrap iterations if required  
 - `return_distribution = true`: in case of bootstrap, return distribution (if also `do_plot`, it plots distribution)  
 - `do_plot::Bool = true`: do or not the plot  
+- `plot_bootstrap::Bool = true`: plot the bootstrap errors  
+- `plot_propagation::Bool = true`: plot the propagation errors  
 - `show_gui::Bool = true`: if `do_plot`, this flag open the GUI or not  
 - `plot_file::String = nothing`: if `do_plot`, this is the full name of the output plot file  
 - `seed::Int = 42`: seed of the random number  
@@ -574,6 +594,8 @@ function full_linear_ephemeris_analysis(
     nboot = nothing,
     return_distribution = true,
     do_plot = true,
+    plot_bootstrap = true,
+    plot_propagation = true,
     show_gui = true,
     plot_file = nothing,
     seed = 42,
@@ -613,6 +635,11 @@ function full_linear_ephemeris_analysis(
     x_plt = Tlin .- tscale
     y_plt = oc_d .* scl.val
     ey_plt = err_T0s .* scl.val
+
+    epo_over = minimum(epochs):1:maximum(epochs)
+    n_over = length(epo_over)
+    Tlin_over = linear_transit_time.(Tref.fit, Pref.fit, epo_over)
+    x_plt_over = Tlin_over .- tscale
 
     rng = MersenneTwister(seed)
     Random.seed!(rng, seed)
@@ -663,40 +690,60 @@ function full_linear_ephemeris_analysis(
         # create the plot window
         plt = plot(
             grid = false,
-            size = (1024, 1024),
+            # size = (1024, 1024),
+            size = (1280, 1024),
             dpi = 300,
             thickness_scaling = 1,
             fontfamily = "Computer Modern",
             xlabel = L"\mathrm{BJD}_\mathrm{TDB}%$(xlscale)",
             ylabel = L"\mathrm{O-C\ (%$(scl.lab))}",
             # xtickfontsize=14, ytickfontsize=14,
-            tickfontsize = 14,
+            tickfontsize = 20,
             # xguidefontsize=16, yguidefontsize=16,
-            guidefontsize = 16,
+            guidefontsize = 22,
+            legend=:outerright,
+            legendfontsize= 16,
             margin = 5mm,
+            framestyle = :box,
+            tick_direction = :out
         )
 
         # plot the error propagation with bootstrap or formal error
+        
         if bootstrap
-            prop_ey = linear_error_prop.(T_boot.rms, P_boot.rms, epochs) .* scl.val
+            prop_ey = linear_error_prop.(T_boot.rms, P_boot.rms, epo_over) .* scl.val
             println("Error propagation plot with bootstrap analysis")
             if return_distribution
                 boot_plt = plot_full_bootstrap_distribution(Tref.fit, T_boot, Pref.fit, P_boot)
             end 
-        else
-            prop_ey = linear_error_prop.(Tref.err, Pref.err, epochs) .* scl.val
+            if plot_bootstrap
+                plot!(
+                    plt,
+                    x_plt_over,
+                    zeros(n_over),
+                    ribbon = prop_ey,
+                    color = :gray60,
+                    fillalpha = 0.5,
+                    lw = 0.0,
+                    label = "bootstrap",
+                    )
+                end
+            end
+            
+        if plot_propagation
+            prop_ey = linear_error_prop.(Tref.err, Pref.err, epo_over) .* scl.val
             println("Error propagation plot with formal error")
+            plot!(
+                plt,
+                x_plt_over,
+                zeros(n_over),
+                ribbon = prop_ey,
+                color = :gray25,
+                fillalpha = 0.8,
+                lw = 0.0,
+                label = "formal error",
+            )
         end
-        plot!(
-            plt,
-            x_plt,
-            zeros(nT0s),
-            ribbon = prop_ey,
-            color = :gray,
-            fillalpha = 0.4,
-            lw = 0.0,
-            label = "",
-        )
 
         # define colors
         usrc = unique(sources)
@@ -717,7 +764,7 @@ function full_linear_ephemeris_analysis(
                 y_plt[sel],
                 ey_plt[sel];
                 color = colors[i_s],
-                lw = 2.5,
+                lw = 3.5,
                 ls = :solid,
             )
             plot!(
@@ -726,9 +773,10 @@ function full_linear_ephemeris_analysis(
                 y_plt[sel],
                 seriestype = :scatter,
                 label = "$(ss)",
-                markersize = 5,
+                markersize = 5.5,
                 markercolor = colors[i_s],
-                markerstrokecolor = :white,
+                # markerstrokecolor = :white,
+                markerstrokecolor = :black,
                 markerstrokewidth = 0.5,
             )
         end
@@ -754,12 +802,15 @@ function full_linear_ephemeris_analysis(
             z_order = 1,
         )
 
-        
+        split_plot_file = splitext(plot_file)
         # save the file if provided
         if !isnothing(plot_file)
             savefig(plt, plot_file)
             if bootstrap & return_distribution
-                savefig(boot_plt, replace(plot_file, ".png" => "_TP_bootstrap.png"))
+                savefig(boot_plt,
+                    # replace(plot_file, ".png" => "_TP_bootstrap.png")
+                    split_plot_file[1] * "_TP_bootstrap" * split_plot_file[2]
+                )
             end
         end
         if show_gui
@@ -809,7 +860,7 @@ function full_linear_ephemeris_analysis(
     #     println(eT0, " ", ePl)
     # end
 
-    return
+    return plt
 end
 
 # =============================================================================
@@ -848,7 +899,7 @@ function test()
     do_plot = true
     plot_file = nothing
 
-    full_linear_ephemeris_analysis(
+    _ = full_linear_ephemeris_analysis(
         T0s,
         err_T0s;
         Tref_in = Tref_in,
