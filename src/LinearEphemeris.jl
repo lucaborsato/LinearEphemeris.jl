@@ -17,7 +17,8 @@ export BTJD
 export DAY2SEC, SEC2DAY, DAY2MIN, MIN2DAY, DAY2HOUR, HOUR2DAY
 export linear_error_prop, transit_epoch, linear_transit_time, linear_transit_times
 export wls_nr
-export fit_linear_ephemeris, statistics_fit, get_nboot, classical_bootstrap
+export fit_linear_ephemeris, statistics_fit, get_scaling_oc, get_nboot, classical_bootstrap
+export custom_errorbar!, plot_one_bootstrap_distribution, plot_full_bootstrap_distribution
 export full_linear_ephemeris_analysis
 
 BTJD = 2457000.0
@@ -448,6 +449,11 @@ end
 
 f4s(x) = @sprintf("%.4f", x)
 
+"""
+    plot_one_bootstrap_distribution(x_true, x_boot, x_label)
+
+Create plot of one distribution.
+"""
 function plot_one_bootstrap_distribution(x_true, x_boot, x_label)
 
     println("plotting ", x_label)
@@ -508,6 +514,11 @@ function plot_one_bootstrap_distribution(x_true, x_boot, x_label)
 end
     
 
+"""
+    plot_full_bootstrap_distribution(q_true, q_boot, m_true, m_boot)
+
+Plot distributions of Tref (q) and Pref (m).
+"""
 function plot_full_bootstrap_distribution(q_true, q_boot, m_true, m_boot)
 
     q_plt = plot_one_bootstrap_distribution(q_true, q_boot, L"$T_\mathrm{ref}$")
@@ -822,7 +833,6 @@ function full_linear_ephemeris_analysis(
 
     end
 
-    # TODO:
     # output of T0s and O-C
     println()
     println("# O-C SUMMARY")

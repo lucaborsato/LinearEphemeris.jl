@@ -55,6 +55,8 @@ full_linear_ephemeris_analysis(
         nboot = nothing,
         return_distribution = true,
         do_plot = true,
+        plot_bootstrap = true,
+        plot_propagation = true,
         show_gui = true,
         plot_file = nothing,
         seed = 42,
@@ -68,8 +70,8 @@ where:
 `plot_file` is the file name (with complete path) of the output of the plot, if `do_plot = false` it will not be used.  
 `seed` is the seed for the random number generator.  
 
-There is a working example based on [Kepler- 9](https://ui.adsabs.harvard.edu/abs/2019MNRAS.484.3233B/abstract) in the [examples](../../examples/) folder, 
-just run [Kepler-9.jl](../../examples/Kepler-9.jl) and it will print out the results and create the two O-C diagrams (one for each planet).  
+There is a working example based on [Kepler- 9](https://ui.adsabs.harvard.edu/abs/2019MNRAS.484.3233B/abstract) in the `examples` folder, 
+just run [Kepler-9.jl](examples/Kepler-9.jl) and it will print out the results and create the two O-C diagrams (one for each planet and one for both) and distribution plots.  
 
 ## 4. Function Documentation
 
@@ -81,8 +83,12 @@ linear_transit_times
 wls_nr
 fit_linear_ephemeris
 statistics_fit
+get_scaling_oc
 get_nboot
 classical_bootstrap
+custom_errorbar!
+plot_one_bootstrap_distribution
+plot_full_bootstrap_distribution
 full_linear_ephemeris_analysis
 ```
 
