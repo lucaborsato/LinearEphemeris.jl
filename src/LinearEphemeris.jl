@@ -589,6 +589,7 @@ It prints the output on the standard output and do the plots if required.
 - `show_gui::Bool = true`: if `do_plot`, this flag open the GUI or not  
 - `plot_file::String = nothing`: if `do_plot`, this is the full name of the output plot file  
 - `seed::Int = 42`: seed of the random number  
+- `return_linephem`::Bool = true`: return the linear ephemeris object
 
 # Returns:
 nothing
@@ -610,6 +611,7 @@ function full_linear_ephemeris_analysis(
     show_gui = true,
     plot_file = nothing,
     seed = 42,
+    return_linephem = true
 )
 
     nT0s = length(T0s)
@@ -869,8 +871,19 @@ function full_linear_ephemeris_analysis(
     # for (eT0, ePl) in zip(err_T0s, ey_plt)
     #     println(eT0, " ", ePl)
     # end
+    if return_linephem
+        if bootstrap
+            T_lineph = (wls_val=Tref.fit, wls_err=Tref.err, boot_median=T_boot.median, boot_err=T_boot.rms)
+            P_lineph = (wls_val=Pref.fit, wls_err=Pref.err, boot_median=P_boot.median, boot_err=P_boot.rms)
+        else
+            T_lineph = (wls_val=Tref.fit, wls_err=Tref.err)
+            P_lineph = (wls_val=Pref.fit, wls_err=Pref.err)
+        end
+        return plt, T_lineph, P_lineph
+    else
+        return plt
+    end
 
-    return plt
 end
 
 # =============================================================================
