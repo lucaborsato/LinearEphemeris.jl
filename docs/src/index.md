@@ -60,6 +60,7 @@ full_linear_ephemeris_analysis(
         show_gui = true,
         plot_file = nothing,
         seed = 42,
+        return_linephem = true
     )
 ```
 
@@ -69,6 +70,7 @@ where:
 `do_plot` a keyword to do the plot or not.  
 `plot_file` is the file name (with complete path) of the output of the plot, if `do_plot = false` it will not be used.  
 `seed` is the seed for the random number generator.  
+`return_linephem` is a keyword to return the linear ephemeris object.  
 
 There is a working example based on [Kepler- 9](https://ui.adsabs.harvard.edu/abs/2019MNRAS.484.3233B/abstract) in the `examples` folder, 
 just run [Kepler-9.jl](examples/Kepler-9.jl) and it will print out the results and create the two O-C diagrams (one for each planet and one for both) and distribution plots.  
